@@ -52,6 +52,30 @@ export const UTILITY_ACCOUNTS: Record<string, UtilityAccount> = {
   },
 };
 
+/** Synthetic food truck permit rules used by the permit workflow (Milestone 3). */
+export const PERMIT_FEE_USD = 275;
+
+/**
+ * Streets/zones where food truck vending isn't allowed under this
+ * fictional city's zoning rules. Eligibility checks against this list.
+ */
+export const NO_VENDING_ZONES = ["Downtown Historic District", "Cardenal Elementary School Zone"];
+
+/** Synthetic health inspection slots, offered a few days out from "today". */
+export function nextAvailableInspectionSlots(count = 3): string[] {
+  const slots: string[] = [];
+  const base = new Date();
+  for (let i = 1; slots.length < count; i++) {
+    const d = new Date(base);
+    d.setDate(d.getDate() + i);
+    // Offer weekdays only (Mon-Fri), matching CITY_INFO office hours.
+    if (d.getDay() !== 0 && d.getDay() !== 6) {
+      slots.push(d.toISOString().slice(0, 10));
+    }
+  }
+  return slots;
+}
+
 /** Valid 311 service request categories and their routing. */
 export const SERVICE_REQUEST_CATEGORIES = {
   pothole: { department: "Public Works (311)", defaultPriority: "medium" },

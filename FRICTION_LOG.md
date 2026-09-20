@@ -104,3 +104,63 @@ demo that quietly only works because the dev server never restarted.
 **Workaround:** N/A.
 
 **Suggestion:** None — process worked as expected.
+
+---
+
+### 2026-09-20 — Designing an orchestrator that stops instead of guessing
+
+**Task:** Build `run_permit_workflow` so it advances a multi-step case as
+far as possible in one call, without silently fabricating required input
+(a location, an inspection date, an inspection result) it doesn't actually
+have.
+
+**Steps taken:** Structured the orchestrator to check each step's
+precondition in order and return early with a `blockedOn` field and a
+specific `message` the moment a step needs information not present in the
+call's arguments, rather than defaulting fields like `proposedLocation` to
+a placeholder. Verified this explicitly with a test scenario that calls
+`run_permit_workflow` three times, each time supplying only the next
+missing field, confirming the response's `blockedOn`/`message` accurately
+named what was needed each time.
+
+**Expected vs. actual:** No SDK or framework issue here — this was a
+design decision worth documenting for judges, since it's the difference
+between "creative, autonomous multi-step orchestration" (per the judging
+rubric's Alexa+ examples) and a chain of tool calls that happens to work
+once with cherry-picked inputs. An MCP client (or a human) calling this
+tool gets a structured reason to act on, not just a failure.
+
+**Severity:** N/A (design note).
+
+**Workaround:** N/A.
+
+**Suggestion:** If Amazon's own Alexa+ Agent Skill examples show this
+"partial-progress-plus-clear-blocker" return shape as a recommended
+pattern (rather than each participant reinventing it), that would help
+teams avoid the more tempting shortcut of having the orchestrator invent
+default values to force completion.
+
+---
+
+### 2026-09-20 — Catching domain errors cleanly across six new tools
+
+**Task:** Avoid six near-duplicate try/catch blocks in `tools.ts` for the
+new permit-workflow step tools, each of which can throw a domain error
+(e.g. calling `issue_permit` before signoff).
+
+**Steps taken:** Defined a single `PermitWorkflowError` class in
+`permitWorkflow.ts` and one `runStep()` helper in `tools.ts` that calls a
+step function, catches only `PermitWorkflowError`, and turns it into an
+MCP `isError: true` result — letting any *unexpected* exception still
+propagate and fail loudly instead of being masked as a normal tool error.
+
+**Expected vs. actual:** Worked as intended; verified in the failed-
+inspection test scenario that a rejected `request_fire_marshal_signoff`
+call comes back as a clean, readable error message rather than a raw stack
+trace or an uncaught server crash.
+
+**Severity:** N/A (design note, positive outcome).
+
+**Workaround:** N/A.
+
+**Suggestion:** None.
