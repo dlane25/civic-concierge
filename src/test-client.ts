@@ -1,30 +1,57 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 
+function firstText(result: any): string {
+  return result.content[0].text;
+}
+
 async function main() {
   const transport = new StreamableHTTPClientTransport(new URL("http://localhost:3000/mcp"));
-  const client = new Client({ name: "civic-concierge-test-client", version: "0.1.0" });
-
+  const client = new Client({ name: "civic-concierge-test-client", version: "0.2.0" });
   await client.connect(transport);
-  console.log("Negotiated protocol version:", client.getServerVersion());
 
   const tools = await client.listTools();
-  console.log("Tools:", tools.tools.map((t) => t.name));
+  console.log(
+    "Tools:",
+    tools.tools.map((t) => t.name)
+  );
 
-  const infoResult = await client.callTool({ name: "city_info", arguments: {} });
-  console.log("city_info result:", infoResult.content);
-
-  const openResult = await client.callTool({
+  // --- Permits & Licensing ---
+  const permit = await client.callTool({
     name: "start_food_truck_permit",
     arguments: { applicantName: "Taco Volador LLC" },
   });
-  console.log("start_food_truck_permit result:", openResult.content);
+  console.log("\nstart_food_truck_permit:", firstText(permit));
 
-  const parsed = JSON.parse((openResult.content as any)[0].text);
-  const caseId = parsed.case.caseId;
+  // --- Utility Billing ---
+  const balance = await client.callTool({ name: "check_utility_balance", arguments: { accountNumber: "UB-100234" } });
+  console.log("\ncheck_utility_balance:", firstText(balance));
 
-  const statusResult = await client.callTool({ name: "get_case_status", arguments: { caseId } });
-  console.log("get_case_status result:", statusResult.content);
+  const plan = await client.callTool({
+    name: "start_utility_payment_plan",
+    arguments: { accountNumber: "UB-100234", installments: 4 },
+  });
+  console.log("\nstart_utility_payment_plan:", firstText(plan));
+
+  // --- Public Works (311) ---
+  const request = await client.callTool({
+    name: "file_service_request",
+    arguments: {
+      requesterName: "Maria Sandoval",
+      category: "pothole",
+      location: "412 Bluebonnet Ln",
+      description: "Deep pothole blocking the right lane",
+    },
+  });
+  console.log("\nfile_service_request:", firstText(request));
+
+  // --- Cross-cutting: list every case Maria Sandoval has open ---
+  const mine = await client.callTool({ name: "list_my_cases", arguments: { applicantName: "Maria Sandoval" } });
+  console.log("\nlist_my_cases (Maria Sandoval):", firstText(mine));
+
+  // --- Error path: unknown utility account ---
+  const badAccount = await client.callTool({ name: "check_utility_balance", arguments: { accountNumber: "UB-999999" } });
+  console.log("\ncheck_utility_balance (bad account, expect isError):", badAccount.isError, firstText(badAccount));
 
   await client.close();
 }

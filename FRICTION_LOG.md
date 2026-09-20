@@ -53,3 +53,54 @@ what worked well, not just problems.
 
 **Suggestion:** None needed here — the type definitions were sufficient
 documentation on their own.
+
+---
+
+### 2026-09-20 — `node:sqlite` as a zero-dependency persistence layer
+
+**Task:** Move case storage from an in-memory `Map` to something that
+survives a server restart, without adding a database dependency that would
+complicate setup instructions for judges.
+
+**Steps taken:** Tried Node's built-in `node:sqlite` module (`DatabaseSync`)
+directly, on Node 22.22.2, with no CLI flag.
+
+**Expected vs. actual:** Expected it to require `--experimental-sqlite` or
+similar, since Node's own docs still describe it as experimental. It worked
+immediately with no flag, and `@types/node` already ships types for it — no
+`@types/better-sqlite3` or similar needed. Only a cosmetic
+`ExperimentalWarning` prints to stderr on first use.
+
+**Severity:** N/A (positive finding, saved a dependency).
+
+**Workaround:** N/A.
+
+**Suggestion:** Worth flagging on Amazon's side too, if it's relevant to any
+of their own sample apps: `node:sqlite` is a genuinely lower-friction choice
+for hackathon-scale persistence than pulling in a third-party driver, but
+it's easy to assume (from the "experimental" label) that it needs
+extra setup.
+
+---
+
+### 2026-09-20 — Verifying SQLite persistence actually persisted
+
+**Task:** Confirm cases really survive a server restart, not just
+survive within one long-running process (a `Map` would pass that second,
+weaker test too).
+
+**Steps taken:** Ran the smoke test to open cases, force-killed the server
+process, started a brand-new process against the same `.db` file, and ran a
+second script that only reads (`list_my_cases`) — no write path involved —
+to rule out the read hitting leftover process state.
+
+**Expected vs. actual:** Matched expectations: the fresh process returned
+the same cases. Noted here because it's a check worth doing explicitly
+rather than assuming an ORM/driver "just persists" — an easy way to ship a
+demo that quietly only works because the dev server never restarted.
+
+**Severity:** N/A (verification step, not an issue).
+
+**Workaround:** N/A.
+
+**Suggestion:** None — process worked as expected.

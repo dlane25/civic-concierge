@@ -1,29 +1,8 @@
 /**
- * Synthetic data for a fictional municipality: "Rio Cardenal, TX".
+ * Synthetic reference data for a fictional municipality: "Rio Cardenal, TX".
  * No real city, department, or resident is represented. Every record below
  * is invented for demo purposes.
  */
-
-export interface CaseRecord {
-  caseId: string;
-  type: "food_truck_permit" | "utility_billing" | "service_request";
-  status: string;
-  createdAt: string;
-  updatedAt: string;
-  applicant: string;
-  fields: Record<string, unknown>;
-  steps: CaseStep[];
-}
-
-export interface CaseStep {
-  step: string;
-  status: "pending" | "in_progress" | "complete";
-  note?: string;
-}
-
-// In-memory store. Good enough for a hackathon demo; a real deployment
-// would back this with a database.
-export const cases = new Map<string, CaseRecord>();
 
 export const CITY_NAME = "Rio Cardenal, TX";
 
@@ -41,7 +20,45 @@ export const CITY_INFO = {
   fictional: true,
 };
 
-export function nextCaseId(prefix: string): string {
-  const n = Math.floor(Math.random() * 900000 + 100000);
-  return `${prefix}-${n}`;
+/** Synthetic utility accounts, keyed by a made-up account number. */
+export interface UtilityAccount {
+  accountNumber: string;
+  holderName: string;
+  serviceAddress: string;
+  currentBalance: number;
+  dueDate: string;
+  pastDue: boolean;
+  paymentPlanEligible: boolean;
 }
+
+export const UTILITY_ACCOUNTS: Record<string, UtilityAccount> = {
+  "UB-100234": {
+    accountNumber: "UB-100234",
+    holderName: "Maria Sandoval",
+    serviceAddress: "412 Bluebonnet Ln, Rio Cardenal, TX",
+    currentBalance: 187.42,
+    dueDate: "2026-10-05",
+    pastDue: true,
+    paymentPlanEligible: true,
+  },
+  "UB-100987": {
+    accountNumber: "UB-100987",
+    holderName: "Taco Volador LLC",
+    serviceAddress: "88 Commerce Way, Rio Cardenal, TX",
+    currentBalance: 42.1,
+    dueDate: "2026-10-12",
+    pastDue: false,
+    paymentPlanEligible: false,
+  },
+};
+
+/** Valid 311 service request categories and their routing. */
+export const SERVICE_REQUEST_CATEGORIES = {
+  pothole: { department: "Public Works (311)", defaultPriority: "medium" },
+  streetlight_outage: { department: "Public Works (311)", defaultPriority: "medium" },
+  illegal_dumping: { department: "Public Works (311)", defaultPriority: "low" },
+  water_leak: { department: "Utility Billing", defaultPriority: "high" },
+  animal_control: { department: "Public Works (311)", defaultPriority: "medium" },
+} as const;
+
+export type ServiceRequestCategory = keyof typeof SERVICE_REQUEST_CATEGORIES;
