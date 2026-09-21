@@ -164,3 +164,73 @@ trace or an uncaught server crash.
 **Workaround:** N/A.
 
 **Suggestion:** None.
+
+---
+
+### 2026-09-20 — AWS SDK v3 discriminated-union types don't structurally narrow from plain objects
+
+**Task:** Build a Bedrock `ToolConfiguration` (the `tools` array for the
+Converse API) from the MCP server's own tool list, so the Bedrock agent's
+available tools always match the real MCP tools exactly.
+
+**Steps taken:** Mapped each MCP tool summary (`{name, description,
+inputSchema}`) into an object shaped like `{toolSpec: {name, description,
+inputSchema: {json: <JSON Schema>}}}` and assigned it to a variable typed
+as `Tool[]` (from `@aws-sdk/client-bedrock-runtime`).
+
+**Expected vs. actual:** Expected a structurally-correct object literal to
+satisfy the type. Instead got `Property '$unknown' is missing in type
+'{...}' but required in type '$UnknownMember'` — the SDK models `Tool` and
+`ToolInputSchema` as discriminated unions (with a `$unknown` member for
+forward compatibility) that TypeScript cannot narrow into from a plain
+object literal, even when every field matches one of the union's members
+exactly.
+
+**Severity:** Minor (compile-time only, no runtime effect; cost about 10
+minutes to diagnose since the error message doesn't mention "discriminated
+union" or suggest the cast).
+
+**Workaround:** Built the array as a plain, loosely-typed object first,
+then did one explicit `as unknown as Tool[]` cast at the point of use,
+with an inline comment explaining why the cast is needed and that the
+underlying shape is still validated by hand against the SDK's documented
+JSON structure.
+
+**Suggestion:** Either export a plain (non-union) input type for
+constructing these objects, or document the `as unknown as T` pattern in
+the SDK's own tool-use examples — this is a common enough pattern
+(building tool configs from an external tool list) that every MCP-to-
+Bedrock integration will likely hit it.
+
+---
+
+### 2026-09-20 — Bedrock Converse API not live-testable in this sandbox
+
+**Task:** Verify `BedrockAgent`'s tool-use loop end to end against a real
+Bedrock model.
+
+**Steps taken:** Built the full Converse API tool-use loop (send message,
+detect `stopReason === "tool_use"`, call the MCP tool, append a
+`toolResult` content block, repeat) and exercised the surrounding code
+paths that don't require live AWS access: the `AGENT_MODE=bedrock` fast-
+fail when `BEDROCK_MODEL_ID` is unset, and the auto-fallback to the offline
+`MockAgent` when no Bedrock config is present at all.
+
+**Expected vs. actual:** This development sandbox has no AWS credentials
+and no path to acquire any, so the actual `ConverseCommand` call against a
+live Bedrock endpoint could not be exercised here. `MockAgent` uses the
+identical `McpToolRunner`/MCP-transport code path as `BedrockAgent`, which
+gives reasonable confidence in everything except the Bedrock request/
+response shape itself.
+
+**Severity:** Moderate — this is the one piece of the AWS Builder mini
+challenge integration that still needs verification against a real AWS
+account before the demo/submission.
+
+**Workaround:** None; documented as a known gap. `README.md` calls this
+out explicitly under "Running with real Bedrock."
+
+**Suggestion:** Before recording the demo video, run `BedrockAgent`
+against a real AWS account with Bedrock model access enabled and confirm
+at least one full tool-use round trip (e.g. "start a food truck permit for
+Taco Volador").

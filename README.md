@@ -36,8 +36,15 @@ No real city, department, or resident data is used anywhere in this project.
   inspection date, a pass/fail result — rather than guessing or stalling
   silently.
 
-Later milestones add a web simulator and documented AWS integration for the
-AWS Builder mini challenge.
+- **Milestone 4** (this update): a web chat simulator (a stand-in for the
+  Alexa+ voice experience) and an AWS Bedrock agent for the **AWS Builder
+  mini challenge**. The chat UI is served by the same Node process as the
+  MCP server, but the agent behind it is a genuine external MCP client —
+  it connects to `/mcp` over Streamable HTTP exactly like an Alexa+
+  integration would, and drives the Bedrock Converse API's tool-use loop
+  against the real tool list. See "Web simulator & AWS Bedrock" below.
+
+Later milestones add hardening, tests, and the final demo/submission.
 
 ## Requirements
 
@@ -117,6 +124,70 @@ node dist/server.js &        # start a fresh process, same civic-concierge.db
 npx tsx src/test-persistence.ts   # confirms the same cases are still there
 ```
 
+## Web simulator & AWS Bedrock
+
+Alexa+ isn't something this environment can stand up directly, so
+Milestone 4 adds a small web chat UI at `http://localhost:3000/` that
+plays the same role: a conversational front end that talks to Civic
+Concierge only through MCP tool calls, the same way an Alexa+ skill
+would. Every reply in the chat panel is backed by a visible "MCP tool
+calls this turn" log, so it's obvious which tool ran and what it
+returned.
+
+Behind the chat UI is one of two interchangeable agents (`src/agent.ts`
+defines the shared interface):
+
+- **`BedrockAgent`** (`src/bedrockAgent.ts`) — the real submission path for
+  the AWS Builder mini challenge. It calls the AWS Bedrock **Converse API**
+  with tool use enabled, feeding it the live tool list fetched from the MCP
+  server, and loops (calling MCP tools, feeding results back) until the
+  model produces a final reply. This is the code that satisfies "actually
+  call your track's required technology in code."
+- **`MockAgent`** (`src/mockAgent.ts`) — an offline stand-in, used only
+  because this development sandbox has no AWS credentials to test against.
+  It picks intents with regex instead of an LLM, but calls the exact same
+  `McpToolRunner` (same MCP server, same transport, same tools) that
+  `BedrockAgent` does, so running in mock mode still proves the web UI, the
+  MCP wiring, and the tool-call plumbing end to end. **It is not a
+  submission artifact** — it exists purely so the rest of the stack could
+  be tested without AWS access.
+
+### Which agent runs
+
+`getAgent()` in `src/server.ts` picks automatically:
+
+- If `BEDROCK_MODEL_ID` is set (and `AGENT_MODE` isn't `mock`), it uses
+  `BedrockAgent`.
+- Otherwise it falls back to `MockAgent` and logs why.
+- Setting `AGENT_MODE=bedrock` without `BEDROCK_MODEL_ID` fails fast with a
+  clear error instead of silently falling back.
+
+The active mode is also shown in the chat UI's header banner and via
+`GET /api/mode`.
+
+### Running with real Bedrock
+
+```bash
+export AWS_ACCESS_KEY_ID=...
+export AWS_SECRET_ACCESS_KEY=...
+export BEDROCK_MODEL_ID=anthropic.claude-3-5-sonnet-20241022-v2:0   # any Converse-API tool-use-capable model your account has access to
+export BEDROCK_REGION=us-east-1   # optional, defaults to us-east-1 or AWS_REGION
+npm run build
+npm start
+```
+
+Then open `http://localhost:3000/` and chat. This has been built and
+error-path tested (see FRICTION_LOG.md), but the Bedrock Converse API
+call itself could not be live-tested end-to-end in this development
+sandbox, which has no AWS credentials — it should be verified against a
+real AWS account before demo/submission.
+
+### Running with the offline mock (no AWS needed)
+
+Just `npm start` with no `BEDROCK_MODEL_ID` set — this is the default.
+Useful for developing the UI or the MCP tools themselves without needing
+AWS credentials on hand.
+
 ## Project layout
 
 ```
@@ -129,6 +200,12 @@ src/
   test-client.ts           Smoke test covering permits, utility billing, and 311
   test-permit-workflow.ts  Orchestrator test: happy path, denial, failed inspection
   test-persistence.ts      Confirms cases survive a server restart
+  agent.ts                 Shared Agent interface (BedrockAgent and MockAgent both implement it)
+  mcpToolRunner.ts         Thin MCP client wrapper: lists tools, calls tools over Streamable HTTP
+  bedrockAgent.ts          Real agent: AWS Bedrock Converse API tool-use loop against the MCP server
+  mockAgent.ts             Offline stand-in agent for local testing without AWS credentials
+public/
+  index.html, style.css, app.js   Web chat simulator UI
 ```
 
 ## License
