@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Civic Concierge -- Rio Cardenal, TX (demo)</title>
+<link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header>
+    <h1>Civic Concierge</h1>
+    <p class="subtitle">A simulated Alexa+ experience for the fictional city of Rio Cardenal, TX</p>
+    <p class="mode" id="mode-banner">Checking agent mode&hellip;</p>
+  </header>
+
+  <main>
+    <section id="chat">
+      <div id="messages" aria-live="polite"></div>
+      <form id="chat-form">
+        <input id="chat-input" type="text" autocomplete="off" placeholder="Try: start a food truck permit for Taco Volador" />
+        <button type="submit">Send</button>
+      </form>
+    </section>
+
+    <aside id="tool-log">
+      <h2>MCP tool calls this turn</h2>
+      <p class="hint">Every answer above comes from a real call to Civic Concierge's own MCP server -- shown here for transparency.</p>
+      <ol id="tool-log-list"></ol>
+    </aside>
+  </main>
+
+  <footer>
+    <p>Fictional city, fictional data. Built for the Build, Ship, Shape: Amazon Developer Hackathon (Alexa+ track).</p>
+  </footer>
+
+  <script src="/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+{
+  "name": "civic-concierge",
+  "version": "0.1.0",
+  "description": "Civic Concierge - a stateful MCP server for municipal service workflows, built for the Amazon Developer Hackathon (Alexa+ track).",
+  "type": "module",
+  "main": "dist/server.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/server.js",
+    "dev": "tsx watch src/server.ts"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@aws-sdk/client-bedrock-runtime": "^3.1136.0",
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "express": "^4.21.2",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.10.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}
